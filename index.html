@@ -103,6 +103,14 @@
             import { app } from 'https://unpkg.com/hyperapp'
             import html from 'https://unpkg.com/hyperlit'
 
+            const version = '1.0.0';
+
+            if (localStorage.getItem('lastVersion') !== version) {
+                localStorage.setItem('lastVersion', version);
+                localStorage.setItem('stateBackup', localStorage.getItem('state'));
+                localStorage.setItem('extStateBackup', localStorage.getItem('extState'));
+            }
+
             // Save Format
             // tuples of standing;questcompletion
             // courier;pioneer;mummer;inventor;peacekeeper;scout
@@ -728,10 +736,10 @@
                     [key]: Object.values(QUESTS[key]).reduce((arr, l) => [...arr, ...l])
                 }
             ), {})
-            const initialState = ORDER.reduce((obj, key, index) => ({...obj, [key]: {
-                standing: savedState[index * 2],
-                completion: savedState[index * 2 + 1],
-                activeQuests: savedStateExt?.[key]?.activeQuests ?? []
+            const getInitialState = (state, stateEx) => ORDER.reduce((obj, key, index) => ({...obj, [key]: {
+                standing: state[index * 2],
+                completion: state[index * 2 + 1],
+                activeQuests: stateEx?.[key]?.activeQuests ?? []
             }}), {
                 editingFor: ''
             });
@@ -893,6 +901,18 @@
                 return state;
             }
 
+            
+            const promptState = (state) => {
+                const newState = prompt(`Add save data below (current version: ${version}`, localStorage.getItem('state'));
+                try {
+                    const imported = getInitialState(newState.split(';').map(Number));
+                    return [imported, saveState(imported)];
+                } catch {
+                    console.error('There was an error importing this state:', newState);
+                    return state;
+                }
+            }
+
             const standingTracker = (state, coalition) => html`
                 ${
                     state.editingFor === coalition ?
@@ -902,10 +922,10 @@
             `;
 
             app({
-                init: initialState,
+                init: getInitialState(savedState, savedStateExt),
                 view: state => html`
                     <main>
-                        <h1>Coalition Tracker</h1>
+                        <h1 ondblclick=${promptState}>Coalition Tracker</h1>
                         ${Object.entries(QUESTS).map(([coalition, quests]) => html`
                             <h2 style=${{color: coalitionColor(coalition)}}>
                                 ${coalitionName(coalition)}<br />
