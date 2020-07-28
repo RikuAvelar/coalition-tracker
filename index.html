@@ -4,11 +4,49 @@
         <title>Coalition Tracker</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css" integrity="sha512-xiunq9hpKsIcz42zt0o2vCo34xV0j6Ny8hgEylN3XBglZDtTZ2nwnqF/Z/TTCc18sGdvCjbFInNd++6q3J0N6g==" crossorigin="anonymous" />
         <style>
+            body {
+                margin: 0;
+                padding:0;
+                background-color: #fafbfc;
+            }
+            nav {
+                display: flex;
+                border-bottom: 1px solid #ddd;
+                background-color: #fafbfc;
+                position: fixed;
+                top: 0;
+                width: 100%;
+                z-index: 2;
+                padding: 2px 0 0 10px;
+            }
+            nav h1 {
+                margin: 0;
+                font-size: 2.7em;
+                flex: 1 0 0;
+            }
+            nav a {
+                flex: 0 0 0;
+                border-bottom: 1px solid var(--primary-color);
+                line-height: 2.8em;
+                padding: 0px 20px;
+                color: var(--primary-color);
+            }
+            .coalitions {
+                margin: 1em;
+            }
+            .coalitions > h2 {
+                padding-top: 80px;
+                margin-top: -80px;
+            }
+            .coalitions > :first-child {
+                margin-top: 0;
+            }
             h1 small {
                 font-size: 0.25em;
             }
             .coalition {
                 display: flex;
+                flex-wrap: wrap;
             }
             .clickable {
                 cursor: pointer;
@@ -40,7 +78,7 @@
                 text-align: right;
             }
             .type {
-                flex: 1;
+                flex: 1 0 500px;
             }
 
             .type h4 {
@@ -931,9 +969,16 @@
                 init: getInitialState(savedState, savedStateExt),
                 view: state => html`
                     <main>
-                        <h1 ondblclick=${promptState}>Coalition Tracker <small><a href="https://github.com/RikuAvelar/coalition-tracker/blob/master/changelog.md" target="_blank">v${version}</a></small></h1>
+                        <nav>
+                            <h1 ondblclick=${promptState}>Coalition Tracker <small><a href="https://github.com/RikuAvelar/coalition-tracker/blob/master/changelog.md" target="_blank">v${version}</a></small></h1>
+                            
+                            ${ORDER.map(coalition => html`
+                                <a href="#${coalition}" style=${{'--primary-color': coalitionColor(coalition)}}>${coalitionName(coalition).slice(0, -12)}</a>
+                            `)}
+                        </nav>
+                        <div class="coalitions">
                         ${Object.entries(QUESTS).map(([coalition, quests]) => html`
-                            <h2 style=${{color: coalitionColor(coalition)}}>
+                            <h2 id="${coalition}" style=${{color: coalitionColor(coalition)}}>
                                 ${coalitionName(coalition)}<br />
                                 <div class="subtitle">
                                     <small>${getRankNameFromStanding(state[coalition].standing)}</small>
@@ -963,6 +1008,7 @@
                             </div>
                         <hr style={${{borderColor: coalitionColor(coalition)}} />
                         `)}
+                        </div>
                     </main>`,
                 node: document.getElementById('app')
             })

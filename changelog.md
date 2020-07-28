@@ -1,6 +1,7 @@
 # Version 1.1.1
 
 - Fixed an issue with importing an empty string. Properly cancels instead of ruining state. 
+- Added a navigation bar
 
 # Version 1.1.0
 
