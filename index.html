@@ -4,6 +4,9 @@
         <title>Coalition Tracker</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css" integrity="sha512-xiunq9hpKsIcz42zt0o2vCo34xV0j6Ny8hgEylN3XBglZDtTZ2nwnqF/Z/TTCc18sGdvCjbFInNd++6q3J0N6g==" crossorigin="anonymous" />
         <style>
+            h1 small {
+                font-size: 0.25em;
+            }
             .coalition {
                 display: flex;
             }
@@ -925,7 +928,7 @@
                 init: getInitialState(savedState, savedStateExt),
                 view: state => html`
                     <main>
-                        <h1 ondblclick=${promptState}>Coalition Tracker</h1>
+                        <h1 ondblclick=${promptState}>Coalition Tracker <small>v${version}</small></h1>
                         ${Object.entries(QUESTS).map(([coalition, quests]) => html`
                             <h2 style=${{color: coalitionColor(coalition)}}>
                                 ${coalitionName(coalition)}<br />
