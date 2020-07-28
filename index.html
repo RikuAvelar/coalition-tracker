@@ -928,7 +928,7 @@
                 init: getInitialState(savedState, savedStateExt),
                 view: state => html`
                     <main>
-                        <h1 ondblclick=${promptState}>Coalition Tracker <small>v${version}</small></h1>
+                        <h1 ondblclick=${promptState}>Coalition Tracker <small><a href="https://github.com/RikuAvelar/coalition-tracker/blob/master/changelog.md">v${version}</a></small></h1>
                         ${Object.entries(QUESTS).map(([coalition, quests]) => html`
                             <h2 style=${{color: coalitionColor(coalition)}}>
                                 ${coalitionName(coalition)}<br />
