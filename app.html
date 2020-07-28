@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Coalition Tracker</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css" integrity="sha512-xiunq9hpKsIcz42zt0o2vCo34xV0j6Ny8hgEylN3XBglZDtTZ2nwnqF/Z/TTCc18sGdvCjbFInNd++6q3J0N6g==" crossorigin="anonymous" />
+        <style>
+            .coalition {
+                display: flex;
+            }
+            .clickable {
+                cursor: pointer;
+            }
+            .spaced {
+                margin-left: 0.25em;
+                margin-right: 0.25em;
+            }
+            h2 small {
+                font-size: 0.6em;
+                margin-left: 1em;
+                filter: saturate(50%) brightness(90%);
+            }
+            h2 .subtitle {
+                display: flex;
+                align-items: center;
+            }
+            .subtitle input {
+                margin: 0;
+                margin-left: 1em;
+                flex: 0 0 5em;
+            }
+            .quest h4 {
+                display: flex;
+            }
+            .quest h4 small {
+                font-size: 0.6em;
+                flex: 1;
+                text-align: right;
+            }
+            .type {
+                flex: 1;
+            }
+
+            .type h4 {
+                margin-bottom: 0;
+            }
+
+            .type label {
+                margin: 0;
+                font-weight: inherit;
+                cursor: pointer;
+            }
+
+            .type blockquote {
+                padding: 0;
+                padding-right: 1.5rem;
+            }
+
+            .quest {
+                background-color: rgba(0, 0, 0, 0.05);
+                padding: 0.5rem 1.5rem; 
+                transition-property: background-color;
+                transition-duration: 500ms;
+                transition-timing-function: ease;
+            }
+
+            .quest:hover {
+                background-color: rgba(0, 0, 0, 0.02);
+            }
+
+            .quest.unavailable, .quest.unavailable:hover {
+                color: rgba(96, 108, 118, 0.5);
+                background-color: rgba(0, 0, 0, 0.08);
+            }
+
+            .quest.active {
+                background-color: var(--bg-color);
+            }
+
+            .quest.active.unavailable {
+                background-color: var(--bg-color-dark);
+            }
+
+            .quest.active:hover {
+                background-color: var(--bg-color-light);
+            }
+
+            .quest a {
+                color: inherit;
+            }
+
+            .quest:first-child {
+                padding-top: 1rem;
+            }
+            .quest:last-child {
+                padding-bottom: 1rem;
+            }
+
+            .quest input {
+                float: right;
+            }
+        </style>
+        <script type="module">
+            import { app } from 'https://unpkg.com/hyperapp'
+            import html from 'https://unpkg.com/hyperlit'
+
+            // Save Format
+            // tuples of standing;questcompletion
+            // courier;pioneer;mummer;inventor;peacekeeper;scout
+            const colorWheel = (str) => {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                return Math.abs(hash) % 360;
+            };
+            const getMod = (str) => {
+                if (!str) return ['45%', '65%'];
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                }
+ 
+                return [
+                    `${Math.floor((hash >> 16 & 0x000000FF) / 256 * 0.7 * 100 + 15)}%`,
+                    `${Math.floor((hash >> 8 & 0x000000FF) / 256 * 0.30 * 100 + 45)}%`
+                ];
+            }
+            const coalitionColor = (str, mod) => `hsla(${colorWheel(str)}, ${getMod(mod).join(',')}, 1)`;
+            const questColor = (str, mod, lightness = '85%') => `hsla(${colorWheel(str)}, ${getMod(mod)[0]}, ${lightness}, 1)`;
+
+            const ORDER = ['courier', 'pioneer', 'mummer', 'inventor', 'peacekeeper', 'scout'];
+            const RANKS = {
+                Petitioner: 0,
+                Probationer: 1,
+                Disciple: 2,
+                Contributor: 3,
+
+                Partner: 4,
+                Advisor: 5,
+                Magnate: 6,
+                Legend: 7,
+            };
+            const RANKS_LUT = Object.entries(RANKS).reduce((obj, [rank, val]) => ({...obj, [val]: rank}), {})
+            const savedState = (localStorage.getItem('state') || ORDER.map(() => '0;0').join(';')).split(';').map(Number);
+            const savedStateExt = JSON.parse(localStorage.getItem('extState') || '{}');
+            const QUESTS = {
+                courier: {
+                    'Supply Delivery': [
+                        {
+                            name: 'Deliver: Foret de Hennetiel',
+                            link: 'https://www.bg-wiki.com/bg/Deliver:_Foret_de_Hennetiel',
+                            rank: RANKS.Contributor,
+                            text: 'Station → Adoulin'
+                        },
+                        {
+                            name: 'Deliver: Morimar Basalt Fields',
+                            link: 'https://www.bg-wiki.com/bg/Deliver:_Morimar_Basalt_Fields',
+                            rank: RANKS.Contributor,
+                            text: 'Station → Adoulin'
+                        },
+                        {
+                            name: 'Deliver: Morimar Marjami Ravine',
+                            link: 'https://www.bg-wiki.com/bg/Deliver:_Morimar_Marjami_Ravine',
+                            rank: RANKS.Advisor,
+                            text: 'Station → Adoulin'
+                        },
+                        {
+                            name: 'Deliver: Morimar Yocia Weald',
+                            link: 'https://www.bg-wiki.com/bg/Deliver:_Morimar_Yocia_Weald',
+                            rank: RANKS.Advisor,
+                            text: 'Station → Adoulin'
+                        },
+                        {
+                            name: 'Deliver: Morimar Kamihr Drifts',
+                            link: 'https://www.bg-wiki.com/bg/Deliver:_Morimar_Kamihr_Drifts',
+                            rank: RANKS.Legend,
+                            text: 'Station → Adoulin'
+                        },
+                    ],
+                    'Frontline Support': [
+                        {
+                            name: 'Support: Ceizak Battlegrounds',
+                            link: 'https://www.bg-wiki.com/bg/Support:_Ceizak_Battlegrounds',
+                            rank: RANKS.Petitioner,
+                            text: 'Adoulin → Station'
+                        },
+                        {
+                            name: 'Support: Foret de Hennetiel',
+                            link: 'https://www.bg-wiki.com/bg/Support:_Foret_de_Hennetiel',
+                            rank: RANKS.Disciple,
+                            text: 'Adoulin → Station'
+                        },
+                        {
+                            name: 'Support: Morimar Basalt Fields',
+                            link: 'https://www.bg-wiki.com/bg/Support:_Morimar_Basalt_Fields',
+                            rank: RANKS.Disciple,
+                            text: 'Adoulin → Station'
+                        },
+                        {
+                            name: 'Support: Morimar Marjami Ravine',
+                            link: 'https://www.bg-wiki.com/bg/Support:_Morimar_Marjami_Ravine',
+                            rank: RANKS.Advisor,
+                            text: 'Adoulin → Station'
+                        },
+                        {
+                            name: 'Support: Morimar Yocia Weald',
+                            link: 'https://www.bg-wiki.com/bg/Support:_Morimar_Yocia_Weald',
+                            rank: RANKS.Advisor,
+                            text: 'Adoulin → Station'
+                        },
+                        {
+                            name: 'Support: Morimar Kamihr Drifts',
+                            link: 'https://www.bg-wiki.com/bg/Support:_Morimar_Kamihr_Drifts',
+                            rank: RANKS.Magnate,
+                            text: 'Adoulin → Station'
+                        },
+                    ],
+                },
+                pioneer: {
+                    'Procuring resources': [
+                        {
+                            name: 'Procure: Ceizak Battlegrounds',
+                            link: 'https://www.bg-wiki.com/bg/Procure:_Ceizak_Battlegrounds',
+                            text: 'Procure 5 materials by logging in either Ceizak Battlegrounds or Yahse Hunting Grounds.',
+                            rank: RANKS.Petitioner
+                        },
+                        {
+                            name: 'Procure: Foret de Hennetiel',
+                            link: 'https://www.bg-wiki.com/bg/Procure:_Foret_de_Hennetiel',
+                            text: 'Procure 5 materials by harvesting in Foret de Hennetiel.',
+                            rank: RANKS.Disciple
+                        },
+                        {
+                            name: 'Procure: Morimar Basalt Fields',
+                            link: 'https://www.bg-wiki.com/bg/Procure:_Morimar_Basalt_Fields',
+                            text: 'Procure 5 materials by mining in Morimar Basalt Fields.',
+                            rank: RANKS.Disciple
+                        },
+                        {
+                            name: 'Procure: Cirdas Caverns',
+                            link: 'https://www.bg-wiki.com/bg/Procure:_Cirdas_Caverns',
+                            text: 'Procure 5 materials by mining in Cirdas Caverns.',
+                            rank: RANKS.Contributor
+                        },
+                        {
+                            name: 'Procure: Marjami Ravine',
+                            link: 'https://www.bg-wiki.com/bg/Procure:_Marjami_Ravine',
+                            text: 'Procure 5 materials by mining in Marjami Ravine.',
+                            rank: RANKS.Partner
+                        },
+                        {
+                            name: 'Procure: Yorcia Weald',
+                            link: 'https://www.bg-wiki.com/bg/Procure:_Yorcia_Weald',
+                            text: 'Procure 5 materials by logging in Yorcia Weald.',
+                            rank: RANKS.Advisor
+                        },
+                        {
+                            name: 'Procure: Kamihr Drifts',
+                            link: 'https://www.bg-wiki.com/bg/Procure:_Kamihr_Drifts',
+                            text: 'Procure 5 materials by mining in Kamihr Drifts.',
+                            rank: RANKS.Magnate
+                        },
+                        {
+                            name: `Procure: Outer Ra'Kaznar`,
+                            link: 'https://www.bg-wiki.com/bg/Procure:_Outer_Ra%27Kaznar',
+                            text: `Procure 5 materials by mining in Outer Ra'Kaznar.`,
+                            rank: RANKS.Legend
+                        },
+                    ],
+                    'Clearing the way': [
+                        {
+                            name: 'Clear: Ceizak Battlegrounds',
+                            link: 'https://www.bg-wiki.com/bg/Clear:_Ceizak_Battlegrounds',
+                            text: 'Complete a Colonization Reive in either Ceizak Battlegrounds or Yahse Hunting Grounds.',
+                            rank: RANKS.Petitioner
+                        },
+                        {
+                            name: 'Clear: Foret de Hennetiel',
+                            link: 'https://www.bg-wiki.com/bg/Clear:_Foret_de_Hennetiel',
+                            text: 'Complete a Colonization Reive in Foret de Hennetiel.',
+                            rank: RANKS.Probationer
+                        },
+                        {
+                            name: 'Clear: Morimar Basalt Fields',
+                            link: 'https://www.bg-wiki.com/bg/Clear:_Morimar_Basalt_Fields',
+                            text: 'Complete a Colonization Reive in Morimar Basalt Fields.',
+                            rank: RANKS.Probationer
+                        },
+                        {
+                            name: 'Clear: Cirdas Caverns',
+                            link: 'https://www.bg-wiki.com/bg/Clear:_Cirdas_Caverns',
+                            text: 'Complete a Colonization Reive in Cirdas Caverns.',
+                            rank: RANKS.Contributor
+                        },
+                        {
+                            name: 'Clear: Marjami Ravine',
+                            link: 'https://www.bg-wiki.com/bg/Clear:_Marjami_Ravine',
+                            text: 'Complete a Colonization Reive in Marjami Ravine.',
+                            rank: RANKS.Partner
+                        },
+                        {
+                            name: 'Clear: Yorcia Weald',
+                            link: 'https://www.bg-wiki.com/bg/Clear:_Yorcia_Weald',
+                            text: 'Complete a Colonization Reive in Yorcia Weald.',
+                            rank: RANKS.Advisor
+                        },
+                        {
+                            name: 'Clear: Kamihr Drifts',
+                            link: 'https://www.bg-wiki.com/bg/Clear:_Kamihr_Drifts',
+                            text: 'Complete a Colonization Reive in Kamihr Drifts.',
+                            rank: RANKS.Magnate
+                        },
+                        {
+                            name: `Clear: Outer Ra'Kaznar`,
+                            link: `https://www.bg-wiki.com/bg/Clear:_Outer_Ra%27Kaznar`,
+                            text: `Complete a Colonization Reive in Outer Ra'Kaznar or Ra'Kaznar Inner Court.`,
+                            rank: RANKS.Legend
+                        },
+                    ]
+                },
+                mummer: {
+                    'Recovering lost articles': [
+                        {
+                            name: 'Recover: Ceizak Battlegrounds',
+                            link: `https://www.bg-wiki.com/bg/Recover:_Ceizak_Battlegrounds`,
+                            text: 'Find a Lost article in either Ceizak Battlegrounds or Yahse Hunting Grounds.',
+                            rank: RANKS.Petitioner
+                        },
+                        {
+                            name: 'Recover: Foret de Hennetiel',
+                            link: `https://www.bg-wiki.com/bg/Recover:_Foret_de_Hennetiel`,
+                            text: 'Find a Lost article in either Foret de Hennetiel or Sih Gates.',
+                            rank: RANKS.Disciple
+                        },
+                        {
+                            name: 'Recover: Morimar Basalt Fields',
+                            link: `https://www.bg-wiki.com/bg/Recover:_Morimar_Basalt_Fields`,
+                            text: 'Find a Lost article in either Morimar Basalt Fields or Moh Gates.',
+                            rank: RANKS.Disciple
+                        },
+                        {
+                            name: 'Recover: Marjami Ravine',
+                            link: `https://www.bg-wiki.com/bg/Recover:_Marjami_Ravine`,
+                            text: 'Find a Lost article in either Marjami Ravine or Dho Gates.',
+                            rank: RANKS.Partner
+                        },
+                        {
+                            name: 'Recover: Yorcia Weald',
+                            link: `https://www.bg-wiki.com/bg/Recover:_Yorcia_Weald`,
+                            text: 'Find a Lost article in either Yorcia Weald or Cirdas Caverns.',
+                            rank: RANKS.Advisor
+                        },
+                        {
+                            name: 'Recover: Kamihr Drifts',
+                            link: `https://www.bg-wiki.com/bg/Recover:_Kamihr_Drifts`,
+                            text: 'Find a Lost article in either Kamihr Drifts or Woh Gates.',
+                            rank: RANKS.Legend
+                        },
+                    ],
+                    'Behavioral research': [
+                        {
+                            name: 'Research: Rala Waterways', 
+                            link: 'https://www.bg-wiki.com/bg/Research:_Rala_Waterways',
+                            text: 'Become the victim of a special attack from a slug in Rala Waterways.',
+                            rank: RANKS.Petitioner
+                        },
+                        {
+                            name: 'Research: Ceizak Battlegrounds', 
+                            link: 'https://www.bg-wiki.com/bg/Research:_Ceizak_Battlegrounds',
+                            text: 'Become the victim of a special attack from a chapuli in Ceizak Battlegrounds or Yahse Hunting Grounds.',
+                            rank: RANKS.Probationer
+                        },
+                        {
+                            name: 'Research: Foret de Hennetiel', 
+                            link: 'https://www.bg-wiki.com/bg/Research:_Foret_de_Hennetiel',
+                            text: 'Become the victim of a special attack from a craklaw in Foret de Hennetiel or Sih Gates.',
+                            rank: RANKS.Contributor
+                        },
+                        {
+                            name: 'Research: Morimar Basalt Fields', 
+                            link: 'https://www.bg-wiki.com/bg/Research:_Morimar_Basalt_Fields',
+                            text: 'Become the victim of a special attack from a matamata in Morimar Basalt Fields or Moh Gates.',
+                            rank: RANKS.Contributor
+                        },
+                        {
+                            name: 'Research: Marjami Ravine',
+                            link: 'https://www.bg-wiki.com/bg/Research:_Marjami_Ravine',
+                            text: 'Become the victim of a special attack from a tulfaire in Marjami Ravine.',
+                            rank: RANKS.Advisor
+                        },
+                        {
+                            name: 'Research: Yorcia Weald',
+                            link: 'https://www.bg-wiki.com/bg/Research:_Yorcia_Weald',
+                            text: 'Become the victim of a special attack from a snapweed in Yorcia Weald.',
+                            rank: RANKS.Magnate
+                        },
+                        {
+                            name: 'Research: Kamihr Drifts',
+                            link: 'https://www.bg-wiki.com/bg/Research:_Kamihr_Drifts',
+                            text: 'Become the victim of a special attack from a raaz in Kamihr Drifts.',
+                            rank: RANKS.Legend
+                        },
+                    ],
+                    'Morale boosting': [
+                        {
+                            name: 'Boost: Foret de Hennetiel', 
+                            link: 'https://www.bg-wiki.com/bg/Boost:_Foret_de_Hennetiel',
+                            text: 'Cheer up the worker at the frontier station in Foret de Hennetiel or Morimar Basalt Fields',
+                            rank: RANKS.Probationer
+                        },
+                        {
+                            name: 'Boost: Marjami Ravine', 
+                            link: 'https://www.bg-wiki.com/bg/Boost:_Marjami_Ravine',
+                            text: 'Cheer up the worker at the frontier station in Marjami Ravine or Yorcia Weald.',
+                            rank: RANKS.Partner
+                        },
+                        {
+                            name: 'Boost: Kamihr Drifts', 
+                            link: 'https://www.bg-wiki.com/bg/Boost:_Kamihr_Drifts',
+                            text: 'Cheer up the worker at the frontier station in Kamihr Drifts.',
+                            rank: RANKS.Magnate
+                        },
+                    ]
+                },
+                inventor: {
+                    'Gathering materials': [
+                        {
+                            name: `Gather: Rala Waterways`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Rala_Waterways`,
+                            text: `Gather and deliver three spools of Bloodthread to the Task Delegator.`,
+                            rank: RANKS.Petitioner
+                        },
+                        {
+                            name: `Gather: Ceizak Battlegrounds`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Ceizak_Battlegrounds`,
+                            text: `Gather and deliver five Chapuli Wings to the Task Delegator.`,
+                            rank: RANKS.Petitioner
+                        },
+                        {
+                            name: `Gather: Yahse Hunting Grounds`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Yahse_Hunting_Grounds`,
+                            text: `Gather and deliver five Twitherym Wings to the Task Delegator.`,
+                            rank: RANKS.Petitioner
+                        },
+                        {
+                            name: `Gather: Sih Gates`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Sih_Gates`,
+                            text: `Gather and deliver three jars of Acuex Poison to the Task Delegator.`,
+                            rank: RANKS.Probationer
+                        },
+                        {
+                            name: `Gather: Moh Gates`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Moh_Gates`,
+                            text: `Gather and deliver three Matamata Shells to the Task Delegator.`,
+                            rank: RANKS.Probationer
+                        },
+                        {
+                            name: `Gather: Foret de Hennetiel`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Foret_de_Hennetiel`,
+                            text: `Gather and deliver three Craklaw Pincers to the Task Delegator.`,
+                            rank: RANKS.Disciple
+                        },
+                        {
+                            name: `Gather: Morimar Basalt Fields`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Morimar_Basalt_Fields`,
+                            text: `Gather and deliver three Peiste Stingers to the Task Delegator.`,
+                            rank: RANKS.Disciple
+                        },
+                        {
+                            name: `Gather: Cirdas Caverns`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Cirdas_Caverns`,
+                            text: `Gather and deliver three jars of Umbril Ooze to the Task Delegator.`,
+                            rank: RANKS.Contributor
+                        },
+                        {
+                            name: `Gather: Dho Gates`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Dho_Gates`,
+                            text: `Gather and deliver three Slug Eyes to the Task Delegator.`,
+                            rank: RANKS.Partner
+                        },
+                        {
+                            name: `Gather: Marjami Ravine`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Marjami_Ravine`,
+                            text: `Gather and deliver three Tulfaire Feathers to the Task Delegator.`,
+                            rank: RANKS.Partner
+                        },
+                        {
+                            name: `Gather: Yorcia Weald`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Yorcia_Weald`,
+                            text: `Gather and deliver three Snapweed Tendrils to the Task Delegator.`,
+                            rank: RANKS.Advisor
+                        },
+                        {
+                            name: `Gather: Woh Gates`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Woh_Gates`,
+                            text: `Gather and deliver three Snoll Arms to the Task Delegator.`,
+                            rank: RANKS.Magnate
+                        },
+                        {
+                            name: `Gather: Kamihr Drifts`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Kamihr_Drifts`,
+                            text: `Gather and deliver three Raaz Tusks to the Task Delegator.`,
+                            rank: RANKS.Magnate
+                        },
+                        {
+                            name: `Gather: Outer Ra'Kaznar`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Outer_Ra%27Kaznar`,
+                            text: `Gather and deliver one Dullahan Armor to the Task Delegator.`,
+                            rank: RANKS.Legend
+                        },
+                        {
+                            name: `Gather: Ra'Kaznar Inner Court`,
+                            link: `https://www.bg-wiki.com/bg/Gather:_Ra%27Kaznar_Inner_Court`,
+                            text: `Gather and deliver three Luminicloths to the Task Delegator.`,
+                            rank: RANKS.Legend
+                        },
+                    ],
+                },
+                peacekeeper: {
+                    'Preserve the peace': [
+                        {
+                            name: `Preserve: Ceizak Battlegrounds`,
+                            link: `https://www.bg-wiki.com/bg/Preserve:_Ceizak_Battlegrounds`,
+                            text: `Complete a successful Lair Reive in Ceizak Battlegrounds.`,
+                            rank: RANKS.Petitioner
+                        },
+                        {
+                            name: `Preserve: Yahse Hunting Grounds`,
+                            link: `https://www.bg-wiki.com/bg/Preserve:_Yahse_Hunting_Grounds`,
+                            text: `Complete a successful Lair Reive in Yahse Hunting Grounds.`,
+                            rank: RANKS.Petitioner
+                        },
+                        {
+                            name: `Preserve: Foret de Hennetiel`,
+                            link: `https://www.bg-wiki.com/bg/Preserve:_Foret_de_Hennetiel`,
+                            text: `Complete a successful Lair Reive in Foret de Hennetiel.`,
+                            rank: RANKS.Disciple
+                        },
+                        {
+                            name: `Preserve: Morimar Basalt Fields`,
+                            link: `https://www.bg-wiki.com/bg/Preserve:_Morimar_Basalt_Fields`,
+                            text: `Complete a successful Lair Reive in Morimar Basalt Fields.`,
+                            rank: RANKS.Disciple
+                        },
+                        {
+                            name: `Preserve: Cirdas Caverns`,
+                            link: `https://www.bg-wiki.com/bg/Preserve:_Cirdas_Caverns`,
+                            text: `Complete a successful Lair Reive in Cirdas Caverns.`,
+                            rank: RANKS.Contributor
+                        },
+                        {
+                            name: `Preserve: Yorcia Weald`,
+                            link: `https://www.bg-wiki.com/bg/Preserve:_Yorcia_Weald`,
+                            text: `Complete a successful Lair Reive in Yorcia Weald.`,
+                            rank: RANKS.Advisor
+                        },
+                        {
+                            name: `Preserve: Marjami Ravine`,
+                            link: `https://www.bg-wiki.com/bg/Preserve:_Marjami_Ravine`,
+                            text: `Complete a successful Lair Reive in Marjami Ravine.`,
+                            rank: RANKS.Advisor
+                        },
+                        {
+                            name: `Preserve: Kamihr Drifts`,
+                            link: `https://www.bg-wiki.com/bg/Preserve:_Kamihr_Drifts`,
+                            text: `Complete a successful Lair Reive in Kamihr Drifts.`,
+                            rank: RANKS.Magnate
+                        },
+                        {
+                            name: `Preserve: Outer Ra'Kaznar`,
+                            link: `https://www.bg-wiki.com/bg/Preserve:_Outer_Ra%27Kaznar`,
+                            text: `Complete a successful Lair Reive in Outer Ra'Kaznar or Ra'Kaznar Inner Court.`,
+                            rank: RANKS.Legend
+                        },
+                    ],
+                    'Patrol': [
+                        {
+                            name: `Patrol: Rala Waterways`,
+                            link: `https://www.bg-wiki.com/bg/Patrol:_Rala_Waterways`,
+                            text: `Vanquish 5 Toads in Rala Waterways.`,
+                            rank: RANKS.Probationer
+                        },
+                        {
+                            name: `Patrol: Sih Gates`,
+                            link: `https://www.bg-wiki.com/bg/Patrol:_Sih_Gates`,
+                            text: `Vanquish 5 Twitherym in Sih Gates.`,
+                            rank: RANKS.Probationer
+                        },
+                        {
+                            name: `Patrol: Moh Gates`,
+                            link: `https://www.bg-wiki.com/bg/Patrol:_Moh_Gates`,
+                            text: `Vanquish 5 Raptors in Moh Gates.`,
+                            rank: RANKS.Probationer
+                        },
+                        {
+                            name: `Patrol: Cirdas Caverns`,
+                            link: `https://www.bg-wiki.com/bg/Patrol:_Cirdas_Caverns`,
+                            text: `Vanquish 3 Maroliths in Cirdas Caverns.`,
+                            rank: RANKS.Partner
+                        },
+                        {
+                            name: `Patrol: Dho Gates`,
+                            link: `https://www.bg-wiki.com/bg/Patrol:_Dho_Gates`,
+                            text: `Vanquish 3 Efts in Dho Gates.`,
+                            rank: RANKS.Partner
+                        },
+                        {
+                            name: `Patrol: Woh Gates`,
+                            link: `https://www.bg-wiki.com/bg/Patrol:_Woh_Gates`,
+                            text: `Vanquish 3 Acuex in Woh Gates.`,
+                            rank: RANKS.Magnate
+                        },
+                        {
+                            name: `Patrol: Outer Ra'Kaznar`,
+                            link: `https://www.bg-wiki.com/bg/Patrol:_Outer_Ra%27Kaznar`,
+                            text: `Vanquish 3 Ironclads in Outer Ra'Kaznar.`,
+                            rank: RANKS.Legend
+                        },
+                    ]
+                },
+                scout: {
+                    'Land surveys': [
+                        {
+                            name: `Survey: Ceizak Battlegrounds`,
+                            link: `https://www.bg-wiki.com/bg/Survey:_Ceizak_Battlegrounds`,
+                            text: `Survey an Ergon Locus located in Ceizak Battlegrounds or Yahse Hunting Grounds.`, 
+                            rank: RANKS.Petitioner
+                        },
+                        {
+                            name: `Survey: Sih Gates`,
+                            link: `https://www.bg-wiki.com/bg/Survey:_Sih_Gates`,
+                            text: `Survey an Ergon Locus located in Sih Gates or Moh Gates.`, 
+                            rank: RANKS.Probationer
+                        },
+                        {
+                            name: `Survey: Foret de Hennetiel`,
+                            link: `https://www.bg-wiki.com/bg/Survey:_Foret_de_Hennetiel`,
+                            text: `Survey an Ergon Locus located in Foret de Hennetiel.`, 
+                            rank: RANKS.Disciple
+                        },
+                        {
+                            name: `Survey: Morimar Basalt Fields`,
+                            link: `https://www.bg-wiki.com/bg/Survey:_Morimar_Basalt_Fields`,
+                            text: `Survey an Ergon Locus located in Morimar Basalt Fields.`, 
+                            rank: RANKS.Disciple
+                        },
+                        {
+                            name: `Survey: Cirdas Caverns`,
+                            link: `https://www.bg-wiki.com/bg/Survey:_Cirdas_Caverns`,
+                            text: `Survey an Ergon Locus located in Cirdas Caverns.`, 
+                            rank: RANKS.Contributor
+                        },
+                        {
+                            name: `Survey: Dho Gates`,
+                            link: `https://www.bg-wiki.com/bg/Survey:_Dho_Gates`,
+                            text: `Survey an Ergon Locus located in Dho Gates or Woh Gates.`, 
+                            rank: RANKS.Partner
+                        },
+                        {
+                            name: `Survey: Marjami Ravine`,
+                            link: `https://www.bg-wiki.com/bg/Survey:_Marjami_Ravine`,
+                            text: `Survey an Ergon Locus located in Marjami Ravine.`, 
+                            rank: RANKS.Advisor
+                        },
+                        {
+                            name: `Survey: Yorcia Weald`,
+                            link: `https://www.bg-wiki.com/bg/Survey:_Yorcia_Weald`,
+                            text: `Survey an Ergon Locus located in Yorcia Weald.`, 
+                            rank: RANKS.Advisor
+                        },
+                        {
+                            name: `Survey: Kamihr Drifts`,
+                            link: `https://www.bg-wiki.com/bg/Survey:_Kamihr_Drifts`,
+                            text: `Survey an Ergon Locus located in Kamihr Drifts.`, 
+                            rank: RANKS.Magnate
+                        },
+                    ],
+                    'Component analyses': [
+                        {
+                            name: `Analyze: Foret de Hennetiel`,
+                            link: `https://www.bg-wiki.com/bg/Analyze:_Foret_de_Hennetiel`,
+                            text: `Procure and deliver 1 branch of Gnatbane to the Task Delegator.`,
+                            rank: RANKS.Contributor
+                        },
+                        {
+                            name: `Analyze: Morimar Basalt Fields`,
+                            link: `https://www.bg-wiki.com/bg/Analyze:_Morimar_Basalt_Fields`,
+                            text: `Procure and deliver 1 Marble Nugget to the Task Delegator.`,
+                            rank: RANKS.Contributor
+                        },
+                        {
+                            name: `Analyze: Cirdas Caverns`,
+                            link: `https://www.bg-wiki.com/bg/Analyze:_Cirdas_Caverns`,
+                            text: `Procure and deliver 1 Scholar Stone to the Task Delegator.`,
+                            rank: RANKS.Partner
+                        },
+                        {
+                            name: `Analyze: Marjami Ravine`,
+                            link: `https://www.bg-wiki.com/bg/Analyze:_Marjami_Ravine`,
+                            text: `Procure and deliver 1 chunk of Wootz Ore to the Task Delegator.`,
+                            rank: RANKS.Magnate
+                        },
+                        {
+                            name: `Analyze: Yorcia Weald`,
+                            link: `https://www.bg-wiki.com/bg/Analyze:_Yorcia_Weald`,
+                            text: `Procure and deliver 1 Guatambu Log to the Task Delegator.`,
+                            rank: RANKS.Magnate
+                        },
+                        {
+                            name: `Analyze: Kahmir Drifts`,
+                            link: `https://www.bg-wiki.com/bg/Analyze:_Kahmir_Drifts`,
+                            text: `Procure and deliver 1 Gelid Aggregate to the Task Delegator.`,
+                            rank: RANKS.Legend
+                        },
+                        {
+                            name: `Analyze: Outer Ra'Kaznar`,
+                            link: `https://www.bg-wiki.com/bg/Analyze:_Outer_Ra%27Kaznar`,
+                            text: `Procure and deliver 1 Vanadium Ore to the Task Delegator.`,
+                            rank: RANKS.Legend
+                        },
+                    ]
+                }
+                
+            }
+            const FLAT_QUESTS = ORDER.reduce((obj, key) => (
+                {
+                    ...obj, 
+                    [key]: Object.values(QUESTS[key]).reduce((arr, l) => [...arr, ...l])
+                }
+            ), {})
+            const initialState = ORDER.reduce((obj, key, index) => ({...obj, [key]: {
+                standing: savedState[index * 2],
+                completion: savedState[index * 2 + 1],
+                activeQuests: savedStateExt?.[key]?.activeQuests ?? []
+            }}), {
+                editingFor: ''
+            });
+
+            const saveToLocalStorage = (dispatch, props) => {
+                localStorage.setItem('state', ORDER.map(key => `${props[key].standing};${props[key].completion}`).join(';'))
+                localStorage.setItem('extState', JSON.stringify(props))
+            }
+
+            const saveState = (props) => [saveToLocalStorage, props]
+
+            const coalitionName = (key) => `${key[0].toUpperCase()}${key.slice(1)}'s Coalition`
+            const getRank = (rank) => Math.max(0, Math.min(7, Math.floor(rank / 20)));
+            const getRankNameFromStanding = (rank) => RANKS_LUT[getRank(rank)]
+            // const getStandingUpdaterFor = coalition => state => state[coalition]
+
+            const isQuestAvailable = (state, coalition, quest) => (
+                getRank(state[coalition].standing) >= quest.rank &&
+                !(
+                    getRank(state[coalition].standing) >= RANKS.Contributor && (getRank(state[coalition].standing) - quest.rank > 1)
+                )
+            );
+
+            const isQuestActive = (state, coalition, quest) => state[coalition].activeQuests?.includes(FLAT_QUESTS[coalition].indexOf(quest));
+
+            const isQuestComplete = (state, coalition, quest) => {
+                const questIndex = FLAT_QUESTS[coalition].indexOf(quest);
+
+                return !!((state[coalition].completion >> questIndex) & 1);
+            }
+
+            const updateStandingReducer = (state, event) => ({...state, editingFor: '', [state.editingFor]: {...state[state.editingFor], standing: Number(event.target.value)}});
+            const onStandingKey = (state, event) => {
+                if (event.key === 'Enter') {
+                    return updateStanding(state, event);
+                }
+
+                if (event.key === 'Escape') {
+                    return {...state, editingFor: ''};
+                }
+
+                return state;
+            }
+
+            const clearSelection = () => {
+                if (window.getSelection) {
+                    if (window.getSelection().empty) {
+                        window.getSelection().empty();
+                    } else if (window.getSelection().removeAllRanges) { 
+                        window.getSelection().removeAllRanges();
+                    }
+                }
+            };
+
+            const toggleQuestCompletionReducer = (state, coalition, quest) => ({
+                ...state,
+                [coalition]: {
+                    ...state[coalition],
+                    // XOR will toggle the quest
+                    completion: state[coalition].completion ^ (1 << FLAT_QUESTS[coalition].indexOf(quest))
+                }
+            });
+
+            const activateQuestCompletionReducer = (state, coalition, quest) => ({
+                ...state,
+                [coalition]: {
+                    ...state[coalition],
+                    // OR will activate the quest
+                    completion: state[coalition].completion | (1 << FLAT_QUESTS[coalition].indexOf(quest)),
+                    activeQuests: state[coalition].activeQuests.filter(v => v !== FLAT_QUESTS[coalition].indexOf(quest))
+                }
+            });
+            
+
+            const activateQuestStateReducer = (state, coalition, quest) => ({
+                ...state,
+                [coalition]: {
+                    ...state[coalition],
+                    activeQuests: [...state[coalition].activeQuests, FLAT_QUESTS[coalition].indexOf(quest)]
+                }
+            });
+            
+
+            const deactivateQuestStateReducer = (state, coalition, quest) => ({
+                ...state,
+                [coalition]: {
+                    ...state[coalition],
+                    activeQuests: state[coalition].activeQuests.filter(v => v !== FLAT_QUESTS[coalition].indexOf(quest))
+                }
+            });
+
+            const updateStanding = (state, event) => [
+                updateStandingReducer(state, event),
+                saveState(updateStandingReducer(state, event))
+            ];
+
+            const toggleQuestCompletion = (state, coalition, quest, event) => {
+                if (event) {
+                    event.stopPropagation();
+                }
+                const newState = toggleQuestCompletionReducer(state, coalition, quest);
+                return [
+                    newState,
+                    saveState(newState)
+                ];
+            };
+            
+
+            const performQuest = (state, coalition, quest, event) => {
+                if (event) {
+                    event.preventDefault();
+                }
+                const currentStanding = state[coalition].standing;
+                const editingState = {...state, editingFor: coalition};
+                const newState = updateStandingReducer(activateQuestCompletionReducer(editingState, coalition, quest), {target: {value: currentStanding + 3}});
+                clearSelection();
+                return [
+                    newState,
+                    saveState(newState),
+                ];
+            };
+
+            const activateQuest = (state, coalition, quest, event) => {
+                if (event) {
+                    event.preventDefault();
+                }
+
+                const questState = isQuestActive(state, coalition, quest);
+                
+                if (questState) {
+                    return performQuest(state, coalition, quest, event);
+                }
+                
+                const newState = activateQuestStateReducer(state, coalition, quest);
+                return [
+                    newState,
+                    saveState(newState),
+                ];
+            };
+            
+
+            const deactivateQuest = (state, coalition, quest, event) => {
+                if (event) {
+                    event.preventDefault();
+                }
+                
+                const newState = deactivateQuestStateReducer(state, coalition, quest);
+                return [
+                    newState,
+                    saveState(newState),
+                ];
+            };
+
+            const noopPropStop = (state, event) => {
+                if (event) {
+                    event.stopPropagation();
+                }
+
+                return state;
+            }
+
+            const standingTracker = (state, coalition) => html`
+                ${
+                    state.editingFor === coalition ?
+                        html`<input value=${state[coalition].standing} onchange=${updateStanding} onkeydown=${onStandingKey} />` :
+                        html`<small class="clickable" onclick=${state => ({...state,editingFor: coalition})}>(<span class="spaced">${state[coalition].standing}</span>)</small>`
+                }
+            `;
+
+            app({
+                init: initialState,
+                view: state => html`
+                    <main>
+                        <h1>Coalition Tracker</h1>
+                        ${Object.entries(QUESTS).map(([coalition, quests]) => html`
+                            <h2 style=${{color: coalitionColor(coalition)}}>
+                                ${coalitionName(coalition)}<br />
+                                <div class="subtitle">
+                                    <small>${getRankNameFromStanding(state[coalition].standing)}</small>
+                                    ${standingTracker(state, coalition)}
+                                </div>
+                            </h2>
+                            <div class="coalition">
+                            ${Object.entries(quests).map(([type, quests]) => html`
+                                <div class="type">
+                                    <h3 style=${{color: coalitionColor(coalition, type)}}>${type}</h3>
+                                    <blockquote style=${{borderColor: coalitionColor(coalition, type)}}>
+                                    ${quests.map((quest) => html`
+                                        <div 
+                                            class="quest ${isQuestAvailable(state, coalition, quest) ? '' : 'unavailable'} ${isQuestActive(state, coalition, quest) ? 'active' : ''}"
+                                            onclick=${(state) => activateQuest(state, coalition, quest, event)}
+                                            oncontextmenu=${(state) => deactivateQuest(state, coalition, quest, event)}
+                                            style=${{'--bg-color': questColor(coalition, type), '--bg-color-light': questColor(coalition, type, '95%'), '--bg-color-dark': questColor(coalition, type, '75%')}}
+                                        >
+                                            <h4><a onclick=${noopPropStop} href=${quest.link} target="_blank">${quest.name}</a> <small>${RANKS_LUT[quest.rank]}</small></h4>
+                                            <small>${quest.text}</small>
+                                            <input type="checkbox" checked=${isQuestComplete(state, coalition, quest)} onclick=${(state, event) => toggleQuestCompletion(state, coalition, quest, event)} />
+                                        </div>
+                                    `)}
+                                    </blockquote>
+                                </div>
+                            `)}
+                            </div>
+                        <hr style={${{borderColor: coalitionColor(coalition)}} />
+                        `)}
+                    </main>`,
+                node: document.getElementById('app')
+            })
+        </script>
+    </head>
+    <body>
+        <main id="app"></main>
+    </body>
+</html>
