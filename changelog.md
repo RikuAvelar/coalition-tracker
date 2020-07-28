@@ -1,3 +1,7 @@
+# Version 1.1.1
+
+- Fixed an issue with importing an empty string. Properly cancels instead of ruining state. 
+
 # Version 1.1.0
 
 Added a link to the changelog by clicking on the version number at the top.
