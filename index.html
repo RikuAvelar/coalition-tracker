@@ -19,6 +19,10 @@
                 z-index: 2;
                 padding: 2px 0 0 10px;
             }
+
+            .extra-small {
+                font-size: 0.35em;
+            }
             nav h1 {
                 margin: 0;
                 font-size: 2.7em;
@@ -812,6 +816,25 @@
                 return !!((state[coalition].completion >> questIndex) & 1);
             }
 
+            const timeAsString = (totalHours) => {
+                const months = Math.floor(totalHours / (24 * 30));
+                const days = Math.floor((totalHours - (months * 24 * 30)) / 24);
+                const hours = totalHours - (months * 24 * 30) - (days * 24);
+
+                const monthText = months > 0 ? `${months} month${months > 1 ? 's' : ''}` : '';
+                const dayText = days > 0 ? `${days} day${days > 1 ? 's' : ''}` : '';
+                const hourText = `${hours} hour${hours === 1 ? '' : 's'}`;
+
+                return [monthText, dayText, hourText].filter(v => !!v).join(', ');
+            }
+
+            const coalitionTimeLeftTillLegend = (state, coalition) => timeAsString(6 * (140 - state[coalition].standing));
+
+            const timeLeftTillLegend = (state) => {
+                const totalTime = ORDER.reduce((total, key) => total + 140 - state[key].standing, 0) * 6;
+                return timeAsString(totalTime);
+            }
+
             const updateStandingReducer = (state, event) => ({...state, editingFor: '', [state.editingFor]: {...state[state.editingFor], standing: Number(event.target.value)}});
             const onStandingKey = (state, event) => {
                 if (event.key === 'Enter') {
@@ -970,7 +993,10 @@
                 view: state => html`
                     <main>
                         <nav>
-                            <h1 ondblclick=${promptState}>Coalition Tracker <small><a href="https://github.com/RikuAvelar/coalition-tracker/blob/master/changelog.md" target="_blank">v${version}</a></small></h1>
+                            <h1 ondblclick=${promptState}>Coalition Tracker 
+                            <small><a href="https://github.com/RikuAvelar/coalition-tracker/blob/master/changelog.md" target="_blank">v${version}</a></small>
+                            <small>Legend in : ${timeLeftTillLegend(state)}</small>
+                            </h1>
                             
                             ${ORDER.map(coalition => html`
                                 <a href="#${coalition}" style=${{'--primary-color': coalitionColor(coalition)}}>${coalitionName(coalition).slice(0, -12)}</a>
@@ -979,10 +1005,11 @@
                         <div class="coalitions">
                         ${Object.entries(QUESTS).map(([coalition, quests]) => html`
                             <h2 id="${coalition}" style=${{color: coalitionColor(coalition)}}>
-                                ${coalitionName(coalition)}<br />
+                                ${coalitionName(coalition)}
+                                <small class="extra-small">Legend in: ${coalitionTimeLeftTillLegend(state, coalition)}</small><br />
                                 <div class="subtitle">
                                     <small>${getRankNameFromStanding(state[coalition].standing)}</small>
-                                    ${standingTracker(state, coalition)}
+                                    ${standingTracker(state, coalition)}<br />
                                 </div>
                             </h2>
                             <div class="coalition">
