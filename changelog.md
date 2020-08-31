@@ -1,3 +1,9 @@
+# Version 1.2.1
+
+- Added a toggle speed for the Bronze Shovel Cordon. This can save up to 5 days in time needed to get an ergon weapon.
+    - There are no plans to add the Silver and Gold Shovels, as they can only be obtained after reaching Legend in every coalition.
+- Improved styling for the header
+
 # Version 1.1.3
 
 - Added link to readme in nav bar

@@ -11,6 +11,7 @@ This one-page app allows you to easily track your Adoulin Coalition status and m
 - **Open a quest on BG Wiki** : The names of each quest are links to their BG wiki counterpart. 
 - **Import/Export data** : Double clicking on the title of the page will open a prompt that will show you the base save state. This can be used to move from one computer to another.
 - **View changelog** : Clicking on the version number will open the changelog.
+- **Toggle Fast Cooldowns (Bronze Shovel Cordon)** : Clicking on the shovel icon toggles between having faster (30 minutes) imprimatur cooldowns. This option only appears when all coalitions are at advisor or higher.
 
 ## Technical information
 
