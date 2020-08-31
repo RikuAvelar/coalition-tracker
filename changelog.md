@@ -1,3 +1,9 @@
+# Version 1.1.3
+
+- Added link to readme in nav bar
+- Fixed colors for nav links that aren't for coalitions
+- Fix incorrect titles for Courier's Coalition
+
 # Version 1.1.2
 
 - Added estimated time to Legend Rank
