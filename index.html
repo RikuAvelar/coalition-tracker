@@ -33,8 +33,12 @@
                 border-bottom: 1px solid var(--primary-color);
                 line-height: 2.8em;
                 padding: 0px 20px;
+            }
+
+            nav a.nav-link {
                 color: var(--primary-color);
             }
+
             .coalitions {
                 margin: 1em;
             }
@@ -148,7 +152,7 @@
             import { app } from 'https://unpkg.com/hyperapp'
             import html from 'https://unpkg.com/hyperlit'
 
-            const version = '1.1.1';
+            const version = '1.1.3';
 
             if (localStorage.getItem('lastVersion') !== version) {
                 localStorage.setItem('lastVersion', version);
@@ -212,19 +216,19 @@
                             text: 'Station → Adoulin'
                         },
                         {
-                            name: 'Deliver: Morimar Marjami Ravine',
+                            name: 'Deliver: Marjami Ravine',
                             link: 'https://www.bg-wiki.com/bg/Deliver:_Morimar_Marjami_Ravine',
                             rank: RANKS.Advisor,
                             text: 'Station → Adoulin'
                         },
                         {
-                            name: 'Deliver: Morimar Yocia Weald',
+                            name: 'Deliver: Yocia Weald',
                             link: 'https://www.bg-wiki.com/bg/Deliver:_Morimar_Yocia_Weald',
                             rank: RANKS.Advisor,
                             text: 'Station → Adoulin'
                         },
                         {
-                            name: 'Deliver: Morimar Kamihr Drifts',
+                            name: 'Deliver: Kamihr Drifts',
                             link: 'https://www.bg-wiki.com/bg/Deliver:_Morimar_Kamihr_Drifts',
                             rank: RANKS.Legend,
                             text: 'Station → Adoulin'
@@ -995,11 +999,12 @@
                         <nav>
                             <h1 ondblclick=${promptState}>Coalition Tracker 
                             <small><a href="https://github.com/RikuAvelar/coalition-tracker/blob/master/changelog.md" target="_blank">v${version}</a></small>
+                            <small><a title="How to use this tracker" href="https://github.com/RikuAvelar/coalition-tracker/blob/master/readme.md" target="_blank">View Readme</a></small> 
                             <small>Legend in : ${timeLeftTillLegend(state)}</small>
                             </h1>
                             
                             ${ORDER.map(coalition => html`
-                                <a href="#${coalition}" style=${{'--primary-color': coalitionColor(coalition)}}>${coalitionName(coalition).slice(0, -12)}</a>
+                                <a class="nav-link" href="#${coalition}" style=${{'--primary-color': coalitionColor(coalition)}}>${coalitionName(coalition).slice(0, -12)}</a>
                             `)}
                         </nav>
                         <div class="coalitions">
