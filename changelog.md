@@ -1,3 +1,7 @@
+# Version 1.2.2
+
+- Added a tooltip to the timer to say the actual date of legend rank, instead of just a simplified month counter
+
 # Version 1.2.1
 
 - Added a toggle speed for the Bronze Shovel Cordon. This can save up to 5 days in time needed to get an ergon weapon.

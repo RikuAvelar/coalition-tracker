@@ -197,7 +197,7 @@
             import { app } from 'https://unpkg.com/hyperapp'
             import html from 'https://unpkg.com/hyperlit'
 
-            const version = '1.2.1';
+            const version = '1.2.2';
 
             if (localStorage.getItem('lastVersion') !== version) {
                 localStorage.setItem('lastVersion', version);
@@ -887,6 +887,11 @@
                 const totalTime = ORDER.reduce((total, key) => total + Math.max(0, 140 - state[key].standing), 0) * imprimaturCD(state);
                 return timeAsString(totalTime);
             }
+            const dateOfLegend = (state) => {
+                const totalTime = ORDER.reduce((total, key) => total + Math.max(0, 140 - state[key].standing), 0) * imprimaturCD(state);
+                const date = new Date(Date.now() + totalTime * 60 * 60 * 1000);
+                return new Intl.DateTimeFormat('en', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'}).format(date);
+            }
 
             const updateStandingReducer = (state, event) => ({...state, editingFor: '', [state.editingFor]: {...state[state.editingFor], standing: Number(event.target.value)}});
             const onStandingKey = (state, event) => {
@@ -1057,7 +1062,7 @@
                         <nav>
                             <h1 ondblclick=${promptState}>Coalition Tracker 
                             <div class="info-container">
-                                <small>Legend in : ${timeLeftTillLegend(state)}</small>
+                                <small title=${dateOfLegend(state)}>Legend in : ${timeLeftTillLegend(state)}</small>
                                 <br />
                                 <small><a href="https://github.com/RikuAvelar/coalition-tracker/blob/master/changelog.md" target="_blank">v${version}</a></small>
                                 <small><a title="How to use this tracker" href="https://github.com/RikuAvelar/coalition-tracker/blob/master/readme.md" target="_blank">View Readme</a></small>
