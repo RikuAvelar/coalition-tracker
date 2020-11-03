@@ -197,7 +197,7 @@
             import { app } from 'https://unpkg.com/hyperapp'
             import html from 'https://unpkg.com/hyperlit'
 
-            const version = '1.2.2';
+            const version = '1.2.3';
 
             if (localStorage.getItem('lastVersion') !== version) {
                 localStorage.setItem('lastVersion', version);
@@ -833,10 +833,10 @@
             const getInitialState = (state, stateEx) => ORDER.reduce((obj, key, index) => ({...obj, [key]: {
                 standing: state[index * 2],
                 completion: state[index * 2 + 1],
-                activeQuests: stateEx?.[key]?.activeQuests ?? [],
-                fastCD: stateEx?.fastCD
+                activeQuests: stateEx?.[key]?.activeQuests ?? []
             }}), {
-                editingFor: ''
+                editingFor: '',
+                fastCD: stateEx?.fastCD
             });
 
             const saveToLocalStorage = (dispatch, props) => {
@@ -849,7 +849,6 @@
             const coalitionName = (key) => `${key[0].toUpperCase()}${key.slice(1)}'s Coalition`
             const getRank = (rank) => Math.max(0, Math.min(7, Math.floor(rank / 20)));
             const getRankNameFromStanding = (rank) => RANKS_LUT[getRank(rank)]
-            // const getStandingUpdaterFor = coalition => state => state[coalition]
 
             const isQuestAvailable = (state, coalition, quest) => (
                 getRank(state[coalition].standing) >= quest.rank &&

@@ -1,3 +1,7 @@
+# Version 1.2.3
+
+- Fixed an issue where Fast Cooldown wasn't loaded to the right spot
+
 # Version 1.2.2
 
 - Added a tooltip to the timer to say the actual date of legend rank, instead of just a simplified month counter
